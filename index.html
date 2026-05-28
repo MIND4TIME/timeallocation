@@ -12,8 +12,8 @@
   .hdr-title { font-size: 14px; font-weight: 500; color: #888; }
   .controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .btn { background: transparent; border: 0.5px solid #ccc; border-radius: 8px; padding: 4px 10px; cursor: pointer; font-size: 13px; color: #1a1a1a; line-height: 1.5; display: inline-flex; align-items: center; gap: 4px; }
-  .btn:hover { background: #f0f0ef; }
-  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn:hover:not(:disabled) { background: #f0f0ef; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .week-label { font-size: 13px; font-weight: 500; min-width: 140px; text-align: center; }
   input[type=date] { font-size: 12px; padding: 4px 8px; border: 0.5px solid #ccc; border-radius: 8px; background: #fff; color: #666; cursor: pointer; }
   .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1.5rem; }
@@ -44,14 +44,14 @@
   <div class="hdr">
     <span class="hdr-title">time allocation</span>
     <div class="controls">
-      <button class="btn" onclick="navigate(-1)">&#8592;</button>
+      <button class="btn" id="btn-prev" onclick="navigate(-1)">&#8592;</button>
       <span class="week-label" id="week-label">—</span>
-      <button class="btn" onclick="navigate(1)">&#8594;</button>
+      <button class="btn" id="btn-next" onclick="navigate(1)">&#8594;</button>
       <input type="date" id="date-from" title="de">
       <span style="font-size:11px;color:#bbb">→</span>
       <input type="date" id="date-to" title="até">
       <button class="btn" onclick="jumpToRange()">ir</button>
-      <button class="btn" id="btn-refresh" onclick="fetchData()" title="refresh">&#8635;</button>
+      <button class="btn" id="btn-refresh" onclick="resetToCurrentWeek()" title="voltar à semana atual e atualizar">&#8635;</button>
     </div>
   </div>
 
@@ -92,8 +92,13 @@
 const WEBHOOK = 'https://n8n.codeforall.com/webhook/time-alloc-gf';
 let weekOffset = 0;
 
+function syncNavButtons() {
+  document.getElementById('btn-next').disabled = weekOffset >= 0;
+}
+
 function navigate(delta) {
   weekOffset += delta;
+  syncNavButtons();
   fetchData();
 }
 
@@ -101,18 +106,29 @@ function jumpToRange() {
   const f = document.getElementById('date-from').value;
   const t = document.getElementById('date-to').value;
   if (!f || !t) return;
+  weekOffset = 0;
   fetchData(f, t);
 }
 
+function resetToCurrentWeek() {
+  weekOffset = 0;
+  document.getElementById('date-from').value = '';
+  document.getElementById('date-to').value = '';
+  syncNavButtons();
+  fetchData();
+}
+
 function setLoading(on) {
-  const btn = document.getElementById('btn-refresh');
-  btn.innerHTML = on ? '<span class="spin">&#8635;</span>' : '&#8635;';
-  btn.disabled = on;
+  const refresh = document.getElementById('btn-refresh');
+  refresh.innerHTML = on ? '<span class="spin">&#8635;</span>' : '&#8635;';
+  refresh.disabled = on;
+  document.getElementById('btn-prev').disabled = on;
+  document.getElementById('btn-next').disabled = on || weekOffset >= 0;
 }
 
 function render(data) {
   document.getElementById('week-label').textContent = data.weekLabel || '—';
-  ['client','sales','other','blank'].forEach(k => {
+  ['client', 'sales', 'other', 'blank'].forEach(k => {
     document.getElementById('p-' + k).textContent = (data[k]?.pct ?? 0) + '%';
     document.getElementById('h-' + k).textContent = data[k]?.hours ?? '—';
     document.getElementById('bar-' + k).style.width = (data[k]?.pct ?? 0) + '%';
@@ -123,19 +139,24 @@ function render(data) {
 async function fetchData(customFrom, customTo) {
   setLoading(true);
   try {
-    let url = WEBHOOK + '?weekOffset=' + weekOffset;
-    if (customFrom && customTo) url = WEBHOOK + '?dateFrom=' + customFrom + '&dateTo=' + customTo;
+    const url = (customFrom && customTo)
+      ? WEBHOOK + '?dateFrom=' + customFrom + '&dateTo=' + customTo
+      : WEBHOOK + '?weekOffset=' + weekOffset;
     const res = await fetch(url);
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); }
+    catch { throw new Error('resposta inválida do servidor'); }
     render(data);
-  } catch(e) {
+  } catch (e) {
     document.getElementById('stale-note').textContent = 'erro: ' + e.message;
   } finally {
     setLoading(false);
   }
 }
 
+syncNavButtons();
 fetchData();
 </script>
 </body>
