@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calls</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f9f9f8; color: #1a1a1a; padding: 2rem; min-height: 100vh; }
+  .container { max-width: 680px; margin: 0 auto; }
+
+  .hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.75rem; }
+  .hdr-title { font-size: 14px; font-weight: 500; color: #888; }
+  .btn { background: transparent; border: 0.5px solid #ccc; border-radius: 8px; padding: 4px 10px; cursor: pointer; font-size: 13px; color: #1a1a1a; line-height: 1.5; }
+  .btn:hover { background: #f0f0ef; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .section-label { font-size: 11px; color: #bbb; letter-spacing: 0.04em; margin-bottom: 0.65rem; }
+
+  /* Person cards */
+  .people-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1.5rem; }
+  .person-card { border-radius: 12px; padding: 1rem 1rem 0.85rem; border: 0.5px solid #e8e8e6; background: #fff; }
+  .person-name { font-size: 11px; font-weight: 600; margin-bottom: 0.4rem; }
+  .person-total { font-size: 28px; font-weight: 500; line-height: 1; margin-bottom: 0.25rem; }
+  .person-avg { font-size: 12px; color: #888; }
+  .person-avg span { font-weight: 500; }
+
+  /* Team summary */
+  .team-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.75rem; }
+  .team-card { border-radius: 12px; padding: 0.85rem 1rem; border: 0.5px solid #e8e8e6; background: #fff; }
+  .team-card-label { font-size: 11px; color: #888; margin-bottom: 0.2rem; }
+  .team-card-value { font-size: 22px; font-weight: 500; }
+
+  /* Weekly bars */
+  .weeks { margin-bottom: 1.5rem; }
+  .week-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .week-lbl { font-size: 11px; color: #bbb; width: 42px; text-align: right; flex-shrink: 0; }
+  .week-bar-wrap { flex: 1; background: #f0f0ef; border-radius: 3px; height: 16px; overflow: hidden; position: relative; }
+  .week-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+  .week-val { font-size: 11px; color: #888; width: 28px; flex-shrink: 0; }
+  .week-row.active .week-lbl,
+  .week-row.active .week-val { color: #378ADD; font-weight: 600; }
+  .week-row.active .week-bar-fill { background: #378ADD !important; }
+
+  .avg-line-wrap { position: absolute; top: 0; height: 100%; pointer-events: none; }
+  .avg-line { position: absolute; top: 2px; bottom: 2px; width: 1.5px; background: rgba(0,0,0,0.15); border-radius: 1px; }
+
+  .stale { font-size: 11px; color: #bbb; text-align: right; }
+  .error { font-size: 12px; color: #e55; text-align: center; padding: 1rem; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { display: inline-block; animation: spin 1s linear infinite; }
+
+  @media (max-width: 480px) {
+    body { padding: 1rem; }
+    .people-grid { grid-template-columns: repeat(2, 1fr); }
+    .team-row { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="hdr">
+    <span class="hdr-title">calls</span>
+    <button class="btn" id="btn-refresh" onclick="loadData()">&#8635;</button>
+  </div>
+
+  <div id="content">
+    <div style="text-align:center;padding:2rem;font-size:13px;color:#bbb">a carregar...</div>
+  </div>
+
+  <div class="stale" id="stale"></div>
+</div>
+
+<script>
+const SHEET_ID = '1cmNg7KBPgmYB95AeHl-YarxQ70eMyhjNBj1dY4LmMJE';
+const COLORS   = ['#1D9E75', '#378ADD', '#E8944A', '#888780'];
+
+function setLoading(on) {
+  const btn = document.getElementById('btn-refresh');
+  btn.innerHTML = on ? '<span class="spin">&#8635;</span>' : '&#8635;';
+  btn.disabled = on;
+}
+
+function cellNum(cell) {
+  if (!cell) return null;
+  const v = cell.v;
+  if (v === null || v === undefined) return null;
+  if (typeof v === 'number') return v;
+  const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
+  return isNaN(n) ? null : n;
+}
+
+function avg(arr) {
+  const vals = arr.filter(v => v !== null);
+  if (!vals.length) return 0;
+  return vals.reduce((s, v) => s + v, 0) / vals.length;
+}
+
+async function loadData() {
+  setLoading(true);
+  try {
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    // strip JSONP wrapper
+    const json = JSON.parse(text.replace(/^\s*[^(]+\(/, '').replace(/\);\s*$/, ''));
+    parse(json.table);
+    document.getElementById('stale').textContent = 'atualizado ' + new Date().toLocaleTimeString('pt-PT');
+  } catch(e) {
+    document.getElementById('content').innerHTML = `<div class="error">Erro ao carregar dados: ${e.message}</div>`;
+    document.getElementById('stale').textContent = '';
+    console.error(e);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function parse(table) {
+  const rows = table.rows;
+
+  // Row 1 (0-based) = SE SEMANA — week labels from col 1 onwards
+  const semRow = rows[1]?.c || [];
+  const weekCols = [];
+  for (let i = 1; i < semRow.length; i++) {
+    const v = semRow[i]?.v ?? semRow[i]?.f;
+    if (v !== null && v !== undefined && String(v).trim() !== '') {
+      weekCols.push({ col: i, label: String(v) });
+    }
+  }
+
+  // Rows 2–5 = people (DS, GF, MT, PP)
+  const people = [2, 3, 4, 5].map((rowIdx, pi) => {
+    const row = rows[rowIdx]?.c || [];
+    const name = row[0]?.v || row[0]?.f || '?';
+    const calls = weekCols.map(w => cellNum(row[w.col]));
+    const total = calls.filter(v => v !== null).reduce((s, v) => s + v, 0);
+    const weekAvg = avg(calls);
+    return { name, calls, total, weekAvg, color: COLORS[pi] };
+  });
+
+  // Weekly team totals
+  const weekTotals = weekCols.map((w, i) => {
+    const vals = people.map(p => p.calls[i]).filter(v => v !== null);
+    return vals.length ? vals.reduce((s, v) => s + v, 0) : 0;
+  });
+
+  const grandTotal = weekTotals.reduce((s, v) => s + v, 0);
+  const activeWeekCount = weekTotals.filter(v => v > 0).length;
+  const teamWeekAvg = activeWeekCount ? grandTotal / activeWeekCount : 0;
+
+  // Last week with data
+  let lastActiveIdx = weekTotals.map((v, i) => v > 0 ? i : -1).filter(i => i >= 0).pop() ?? -1;
+
+  render({ people, weekCols, weekTotals, grandTotal, teamWeekAvg, lastActiveIdx });
+}
+
+function render({ people, weekCols, weekTotals, grandTotal, teamWeekAvg, lastActiveIdx }) {
+  const maxWeekTotal = Math.max(...weekTotals, 1);
+  const avgPct = (teamWeekAvg / maxWeekTotal * 100).toFixed(1);
+  const currentWeekVal = lastActiveIdx >= 0 ? weekTotals[lastActiveIdx] : 0;
+  const currentWeekLabel = lastActiveIdx >= 0 ? 'sem ' + weekCols[lastActiveIdx].label : '—';
+
+  const html = `
+    <div class="section-label">por pessoa</div>
+    <div class="people-grid">
+      ${people.map(p => `
+        <div class="person-card">
+          <div class="person-name" style="color:${p.color}">${p.name}</div>
+          <div class="person-total" style="color:${p.color}">${p.total}</div>
+          <div class="person-avg">ø <span>${p.weekAvg.toFixed(1)}</span>/sem</div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="team-row">
+      <div class="team-card">
+        <div class="team-card-label">total</div>
+        <div class="team-card-value">${grandTotal}</div>
+      </div>
+      <div class="team-card">
+        <div class="team-card-label">média / semana</div>
+        <div class="team-card-value">${teamWeekAvg.toFixed(1)}</div>
+      </div>
+      <div class="team-card">
+        <div class="team-card-label">${currentWeekLabel}</div>
+        <div class="team-card-value" style="color:#378ADD">${currentWeekVal}</div>
+      </div>
+    </div>
+
+    <div class="section-label">por semana</div>
+    <div class="weeks">
+      ${weekCols.map((w, i) => {
+        const val = weekTotals[i];
+        const pct = (val / maxWeekTotal * 100).toFixed(1);
+        const isCurrent = i === lastActiveIdx;
+        const barColor = isCurrent ? '#378ADD' : '#1D9E75';
+        return `
+          <div class="week-row ${isCurrent ? 'active' : ''}">
+            <span class="week-lbl">sem ${w.label}</span>
+            <div class="week-bar-wrap">
+              <div class="week-bar-fill" style="width:${pct}%;background:${barColor}"></div>
+              <div class="avg-line-wrap" style="left:${avgPct}%">
+                <div class="avg-line"></div>
+              </div>
+            </div>
+            <span class="week-val">${val > 0 ? val : '—'}</span>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+
+  document.getElementById('content').innerHTML = html;
+}
+
+loadData();
+</script>
+</body>
+</html>
