@@ -109,7 +109,6 @@
         <th class="col-client"><span style="color:#1D9E75">●</span> OP</th>
         <th class="col-sales"><span style="color:#378ADD">●</span> COM</th>
         <th class="col-interno"><span style="color:#D4873C">●</span> INTERNO</th>
-        <th class="col-other"><span style="color:#888780">●</span> other</th>
         <th class="col-blank"><span style="color:#ccc">●</span> blank</th>
         <th class="bar-cell"></th>
       </tr>
@@ -144,14 +143,12 @@ function buildTable() {
       <td class="col-client"><div class="cell-pct" id="p-client-${u.id}">—</div><div class="cell-h" id="h-client-${u.id}">—</div></td>
       <td class="col-sales"><div class="cell-pct" id="p-sales-${u.id}">—</div><div class="cell-h" id="h-sales-${u.id}">—</div></td>
       <td class="col-interno"><div class="cell-pct" id="p-interno-${u.id}">—</div><div class="cell-h" id="h-interno-${u.id}">—</div></td>
-      <td class="col-other"><div class="cell-pct" id="p-other-${u.id}">—</div><div class="cell-h" id="h-other-${u.id}">—</div></td>
       <td class="col-blank"><div class="cell-pct" id="p-blank-${u.id}">—</div><div class="cell-h" id="h-blank-${u.id}">—</div></td>
       <td class="bar-cell">
         <div class="bar-row">
           <div class="bar-seg" id="bar-client-${u.id}"  style="background:#1D9E75;width:0%"></div>
           <div class="bar-seg" id="bar-sales-${u.id}"   style="background:#378ADD;width:0%"></div>
           <div class="bar-seg" id="bar-interno-${u.id}" style="background:#D4873C;width:0%"></div>
-          <div class="bar-seg" id="bar-other-${u.id}"   style="background:#888780;width:0%"></div>
           <div class="bar-seg" id="bar-blank-${u.id}"   style="background:#e0e0de;width:0%"></div>
         </div>
       </td>`;
@@ -179,7 +176,7 @@ function setLoading(on) {
 
 function render(uid, data) {
   userData[uid] = data;
-  ['client','sales','interno','other','blank'].forEach(k => {
+  ['client','sales','interno','blank'].forEach(k => {
     document.getElementById('p-' + k + '-' + uid).textContent = (data[k]?.pct ?? 0) + '%';
     document.getElementById('h-' + k + '-' + uid).textContent = data[k]?.hours ?? '—';
     document.getElementById('bar-' + k + '-' + uid).style.width = (data[k]?.pct ?? 0) + '%';
@@ -194,7 +191,7 @@ function showModal(uid) {
   document.getElementById('modal-week').textContent = data.weekLabel || '';
   const body = document.getElementById('modal-body');
   body.innerHTML = '';
-  ['client','sales','interno','other'].forEach(k => {
+  ['client','sales','interno'].forEach(k => {
     const evts = data[k]?.events;
     if (!evts) return;
     const group = document.createElement('div');
