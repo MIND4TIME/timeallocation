@@ -106,9 +106,9 @@
     <thead>
       <tr>
         <th></th>
-        <th class="col-client"><span style="color:#1D9E75">●</span> client</th>
-        <th class="col-sales"><span style="color:#378ADD">●</span> sales</th>
-        <th class="col-interno"><span style="color:#D4873C">●</span> interno</th>
+        <th class="col-client"><span style="color:#1D9E75">●</span> OP</th>
+        <th class="col-sales"><span style="color:#378ADD">●</span> COM</th>
+        <th class="col-interno"><span style="color:#D4873C">●</span> INTERNO</th>
         <th class="col-other"><span style="color:#888780">●</span> other</th>
         <th class="col-blank"><span style="color:#ccc">●</span> blank</th>
         <th class="bar-cell"></th>
@@ -201,7 +201,8 @@ function showModal(uid) {
     group.className = 'evt-group';
     const title = document.createElement('div');
     title.className = 'evt-group-title ' + k;
-    title.textContent = k;
+    const labels = { client: 'OP', sales: 'COM', interno: 'INTERNO', other: 'other' };
+    title.textContent = labels[k] || k;
     group.appendChild(title);
     if (evts.length === 0) {
       const empty = document.createElement('div');
