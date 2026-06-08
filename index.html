@@ -258,6 +258,7 @@ async function fetchAll(customFrom, customTo) {
 
 buildTable();
 fetchAll();
+setInterval(fetchAll, 10 * 60 * 1000);
 </script>
 </body>
 </html>
