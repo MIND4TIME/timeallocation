@@ -7,7 +7,7 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f9f9f8; color: #1a1a1a; padding: 2rem; min-height: 100vh; }
-  .container { max-width: 680px; margin: 0 auto; }
+  .container { max-width: 860px; margin: 0 auto; }
   .hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.75rem; gap: 8px; flex-wrap: wrap; }
   .hdr-title { font-size: 14px; font-weight: 500; color: #888; }
   .controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
@@ -16,26 +16,37 @@
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .week-label { font-size: 13px; font-weight: 500; min-width: 140px; text-align: center; }
   input[type=date] { font-size: 12px; padding: 4px 8px; border: 0.5px solid #ccc; border-radius: 8px; background: #fff; color: #666; cursor: pointer; }
-  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1.5rem; }
-  .card { border-radius: 12px; padding: 1rem 1rem 0.85rem; border: 0.5px solid #e8e8e6; background: #fff; }
-  .card-label { font-size: 11px; color: #888; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 5px; }
-  .card-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-  .card-pct { font-size: 26px; font-weight: 500; line-height: 1; margin-bottom: 0.2rem; }
-  .card-h { font-size: 12px; color: #888; }
-  .card.client .card-pct { color: #1D9E75; }
-  .card.sales .card-pct { color: #378ADD; }
-  .card.other .card-pct { color: #888780; }
-  .card.blank .card-pct { color: #bbb; }
-  .bar-row { display: flex; gap: 2px; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 1.5rem; background: #eee; }
+
+  .table { width: 100%; border-collapse: collapse; }
+  .table thead th { font-size: 11px; color: #bbb; font-weight: 400; text-align: right; padding: 0 10px 10px; }
+  .table thead th:first-child { text-align: left; padding-left: 0; }
+  .table tbody tr { border-top: 0.5px solid #f0f0ee; }
+  .table tbody tr:first-child { border-top: none; }
+  .table td { padding: 10px 10px; vertical-align: middle; }
+  .table td:first-child { padding-left: 0; }
+
+  .person-name { font-size: 13px; font-weight: 500; color: #555; min-width: 32px; }
+  .cell-pct { font-size: 20px; font-weight: 500; text-align: right; line-height: 1; }
+  .cell-h { font-size: 11px; color: #bbb; text-align: right; margin-top: 2px; }
+  .col-client .cell-pct { color: #1D9E75; }
+  .col-sales .cell-pct  { color: #378ADD; }
+  .col-other .cell-pct  { color: #888780; }
+  .col-blank .cell-pct  { color: #ccc; }
+
+  .bar-cell { width: 120px; padding-left: 16px !important; }
+  .bar-row { display: flex; gap: 2px; height: 6px; border-radius: 3px; overflow: hidden; background: #eee; width: 100%; }
   .bar-seg { height: 100%; transition: width 0.4s ease; min-width: 0; }
-  .stale { font-size: 11px; color: #bbb; text-align: right; }
+
+  .stale { font-size: 11px; color: #bbb; text-align: right; margin-top: 1.25rem; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .spin { display: inline-block; animation: spin 1s linear infinite; }
-  @media (max-width: 480px) {
+
+  @media (max-width: 600px) {
     body { padding: 1rem; }
-    .grid { grid-template-columns: repeat(2, 1fr); }
+    .bar-cell { display: none; }
     .controls { gap: 4px; }
     .week-label { min-width: 110px; }
+    .cell-pct { font-size: 16px; }
   }
 </style>
 </head>
@@ -51,57 +62,72 @@
       <span style="font-size:11px;color:#bbb">→</span>
       <input type="date" id="date-to" title="até">
       <button class="btn" onclick="jumpToRange()">ir</button>
-      <button class="btn" id="btn-refresh" onclick="fetchData()" title="refresh">&#8635;</button>
+      <button class="btn" id="btn-refresh" onclick="fetchAll()" title="refresh">&#8635;</button>
     </div>
   </div>
 
-  <div class="grid">
-    <div class="card client">
-      <div class="card-label"><span class="card-dot" style="background:#1D9E75"></span>client</div>
-      <div class="card-pct" id="p-client">—</div>
-      <div class="card-h" id="h-client">—</div>
-    </div>
-    <div class="card sales">
-      <div class="card-label"><span class="card-dot" style="background:#378ADD"></span>sales</div>
-      <div class="card-pct" id="p-sales">—</div>
-      <div class="card-h" id="h-sales">—</div>
-    </div>
-    <div class="card other">
-      <div class="card-label"><span class="card-dot" style="background:#888780"></span>other</div>
-      <div class="card-pct" id="p-other">—</div>
-      <div class="card-h" id="h-other">—</div>
-    </div>
-    <div class="card blank">
-      <div class="card-label"><span class="card-dot" style="background:#ddd"></span>blank</div>
-      <div class="card-pct" id="p-blank">—</div>
-      <div class="card-h" id="h-blank">—</div>
-    </div>
-  </div>
-
-  <div class="bar-row">
-    <div class="bar-seg" id="bar-client" style="background:#1D9E75;width:0%"></div>
-    <div class="bar-seg" id="bar-sales"  style="background:#378ADD;width:0%"></div>
-    <div class="bar-seg" id="bar-other"  style="background:#888780;width:0%"></div>
-    <div class="bar-seg" id="bar-blank"  style="background:#e0e0de;width:0%"></div>
-  </div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th></th>
+        <th class="col-client"><span style="color:#1D9E75">●</span> client</th>
+        <th class="col-sales"><span style="color:#378ADD">●</span> sales</th>
+        <th class="col-other"><span style="color:#888780">●</span> other</th>
+        <th class="col-blank"><span style="color:#ccc">●</span> blank</th>
+        <th class="bar-cell"></th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
 
   <div class="stale" id="stale-note"></div>
 </div>
 
 <script>
-const WEBHOOK = 'https://n8n.codeforall.com/webhook/time-alloc-gf';
+const USERS = [
+  { id: 'gf', label: 'GF' },
+  { id: 'ds', label: 'DS' },
+  { id: 'mt', label: 'MT' },
+  { id: 'pp', label: 'PP' },
+  { id: 'ic', label: 'IC' },
+];
+const BASE = 'https://n8n.codeforall.com/webhook/time-alloc-';
 let weekOffset = 0;
+
+function buildTable() {
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+  USERS.forEach(u => {
+    const tr = document.createElement('tr');
+    tr.id = 'row-' + u.id;
+    tr.innerHTML = `
+      <td><span class="person-name">${u.label}</span></td>
+      <td class="col-client"><div class="cell-pct" id="p-client-${u.id}">—</div><div class="cell-h" id="h-client-${u.id}">—</div></td>
+      <td class="col-sales"><div class="cell-pct" id="p-sales-${u.id}">—</div><div class="cell-h" id="h-sales-${u.id}">—</div></td>
+      <td class="col-other"><div class="cell-pct" id="p-other-${u.id}">—</div><div class="cell-h" id="h-other-${u.id}">—</div></td>
+      <td class="col-blank"><div class="cell-pct" id="p-blank-${u.id}">—</div><div class="cell-h" id="h-blank-${u.id}">—</div></td>
+      <td class="bar-cell">
+        <div class="bar-row">
+          <div class="bar-seg" id="bar-client-${u.id}" style="background:#1D9E75;width:0%"></div>
+          <div class="bar-seg" id="bar-sales-${u.id}"  style="background:#378ADD;width:0%"></div>
+          <div class="bar-seg" id="bar-other-${u.id}"  style="background:#888780;width:0%"></div>
+          <div class="bar-seg" id="bar-blank-${u.id}"  style="background:#e0e0de;width:0%"></div>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
 
 function navigate(delta) {
   weekOffset += delta;
-  fetchData();
+  fetchAll();
 }
 
 function jumpToRange() {
   const f = document.getElementById('date-from').value;
   const t = document.getElementById('date-to').value;
   if (!f || !t) return;
-  fetchData(f, t);
+  fetchAll(f, t);
 }
 
 function setLoading(on) {
@@ -110,33 +136,44 @@ function setLoading(on) {
   btn.disabled = on;
 }
 
-function render(data) {
-  document.getElementById('week-label').textContent = data.weekLabel || '—';
+function render(uid, data) {
   ['client','sales','other','blank'].forEach(k => {
-    document.getElementById('p-' + k).textContent = (data[k]?.pct ?? 0) + '%';
-    document.getElementById('h-' + k).textContent = data[k]?.hours ?? '—';
-    document.getElementById('bar-' + k).style.width = (data[k]?.pct ?? 0) + '%';
+    document.getElementById('p-' + k + '-' + uid).textContent = (data[k]?.pct ?? 0) + '%';
+    document.getElementById('h-' + k + '-' + uid).textContent = data[k]?.hours ?? '—';
+    document.getElementById('bar-' + k + '-' + uid).style.width = (data[k]?.pct ?? 0) + '%';
   });
-  document.getElementById('stale-note').textContent = 'atualizado ' + (data.fetchedAt || '—');
 }
 
-async function fetchData(customFrom, customTo) {
+async function fetchUser(uid, customFrom, customTo) {
+  const webhook = BASE + uid;
+  let url = webhook + '?weekOffset=' + weekOffset;
+  if (customFrom && customTo) url = webhook + '?dateFrom=' + customFrom + '&dateTo=' + customTo;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+async function fetchAll(customFrom, customTo) {
   setLoading(true);
-  try {
-    let url = WEBHOOK + '?weekOffset=' + weekOffset;
-    if (customFrom && customTo) url = WEBHOOK + '?dateFrom=' + customFrom + '&dateTo=' + customTo;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    render(data);
-  } catch(e) {
-    document.getElementById('stale-note').textContent = 'erro: ' + e.message;
-  } finally {
-    setLoading(false);
-  }
+  const results = await Promise.allSettled(
+    USERS.map(u => fetchUser(u.id, customFrom, customTo))
+  );
+  let weekLabel = '—';
+  let fetchedAt = '—';
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled') {
+      render(USERS[i].id, r.value);
+      if (r.value.weekLabel) weekLabel = r.value.weekLabel;
+      if (r.value.fetchedAt) fetchedAt = r.value.fetchedAt;
+    }
+  });
+  document.getElementById('week-label').textContent = weekLabel;
+  document.getElementById('stale-note').textContent = 'atualizado ' + fetchedAt;
+  setLoading(false);
 }
 
-fetchData();
+buildTable();
+fetchAll();
 </script>
 </body>
 </html>
