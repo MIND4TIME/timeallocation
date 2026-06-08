@@ -91,7 +91,7 @@ const USERS = [
   { id: 'pp', label: 'PP' },
   { id: 'ic', label: 'IC' },
 ];
-const BASE = 'https://n8n.codeforall.com/webhook/time-alloc-';
+const WEBHOOK = 'https://n8n.codeforall.com/webhook/time-alloc';
 let weekOffset = 0;
 
 function buildTable() {
@@ -145,9 +145,8 @@ function render(uid, data) {
 }
 
 async function fetchUser(uid, customFrom, customTo) {
-  const webhook = BASE + uid;
-  let url = webhook + '?weekOffset=' + weekOffset;
-  if (customFrom && customTo) url = webhook + '?dateFrom=' + customFrom + '&dateTo=' + customTo;
+  let url = WEBHOOK + '?user=' + uid + '&weekOffset=' + weekOffset;
+  if (customFrom && customTo) url = WEBHOOK + '?user=' + uid + '&dateFrom=' + customFrom + '&dateTo=' + customTo;
   const res = await fetch(url);
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return res.json();
