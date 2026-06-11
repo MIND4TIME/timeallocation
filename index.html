@@ -33,7 +33,7 @@
   .col-sales .cell-pct   { color: #378ADD; }
   .col-interno .cell-pct { color: #D4873C; }
   .col-other .cell-pct   { color: #888780; }
-  .col-blank .cell-pct   { color: #ccc; }
+  .col-blank .cell-pct   { color: #999; }
 
   .bar-cell { width: 120px; padding-left: 16px !important; }
   .bar-row { display: flex; gap: 2px; height: 6px; border-radius: 3px; overflow: hidden; background: #eee; width: 100%; }
@@ -83,7 +83,6 @@
     <div class="controls">
       <button class="btn" onclick="navigate(-1)">&#8592;</button>
       <span class="week-label" id="week-label">—</span>
-      <span class="week-ref" id="week-ref"></span>
       <button class="btn" onclick="navigate(1)">&#8594;</button>
       <input type="date" id="date-from" title="de">
       <span style="font-size:11px;color:#bbb">→</span>
@@ -153,7 +152,7 @@ function buildTable() {
           <div class="bar-seg" id="bar-client-${u.id}"  style="background:#1D9E75;width:0%"></div>
           <div class="bar-seg" id="bar-sales-${u.id}"   style="background:#378ADD;width:0%"></div>
           <div class="bar-seg" id="bar-interno-${u.id}" style="background:#D4873C;width:0%"></div>
-          <div class="bar-seg" id="bar-blank-${u.id}"   style="background:#e0e0de;width:0%"></div>
+          <div class="bar-seg" id="bar-blank-${u.id}"   style="background:#b8b8b5;width:0%"></div>
         </div>
       </td>`;
     tbody.appendChild(tr);
@@ -185,6 +184,9 @@ function render(uid, data) {
     document.getElementById('h-' + k + '-' + uid).textContent = data[k]?.hours ?? '—';
     document.getElementById('bar-' + k + '-' + uid).style.width = (data[k]?.pct ?? 0) + '%';
   });
+  if (data.weekH) {
+    document.getElementById('h-blank-' + uid).textContent = (data.blank?.hours || '0h') + ' · ' + data.weekH + 'h ref';
+  }
 }
 
 function showModal(uid) {
@@ -246,17 +248,15 @@ async function fetchAll(customFrom, customTo) {
   const results = await Promise.allSettled(
     USERS.map(u => fetchUser(u.id, customFrom, customTo))
   );
-  let weekLabel = '—', weekRef = '', fetchedAt = '—';
+  let weekLabel = '—', fetchedAt = '—';
   results.forEach((r, i) => {
     if (r.status === 'fulfilled') {
       render(USERS[i].id, r.value);
       if (r.value.weekLabel) weekLabel = r.value.weekLabel;
-      if (r.value.weekH)     weekRef   = r.value.weekH + 'h ref';
       if (r.value.fetchedAt) fetchedAt = r.value.fetchedAt;
     }
   });
   document.getElementById('week-label').textContent = weekLabel;
-  document.getElementById('week-ref').textContent   = weekRef;
   document.getElementById('stale-note').textContent = 'atualizado ' + fetchedAt;
   setLoading(false);
 }
