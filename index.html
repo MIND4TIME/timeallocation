@@ -15,6 +15,7 @@
   .btn:hover { background: #f0f0ef; }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .week-label { font-size: 13px; font-weight: 500; min-width: 140px; text-align: center; }
+  .week-ref { font-size: 11px; color: #bbb; }
   input[type=date] { font-size: 12px; padding: 4px 8px; border: 0.5px solid #ccc; border-radius: 8px; background: #fff; color: #666; cursor: pointer; }
 
   .table { width: 100%; border-collapse: collapse; }
@@ -82,6 +83,7 @@
     <div class="controls">
       <button class="btn" onclick="navigate(-1)">&#8592;</button>
       <span class="week-label" id="week-label">—</span>
+      <span class="week-ref" id="week-ref"></span>
       <button class="btn" onclick="navigate(1)">&#8594;</button>
       <input type="date" id="date-from" title="de">
       <span style="font-size:11px;color:#bbb">→</span>
@@ -244,16 +246,17 @@ async function fetchAll(customFrom, customTo) {
   const results = await Promise.allSettled(
     USERS.map(u => fetchUser(u.id, customFrom, customTo))
   );
-  let weekLabel = '—';
-  let fetchedAt = '—';
+  let weekLabel = '—', weekRef = '', fetchedAt = '—';
   results.forEach((r, i) => {
     if (r.status === 'fulfilled') {
       render(USERS[i].id, r.value);
       if (r.value.weekLabel) weekLabel = r.value.weekLabel;
+      if (r.value.weekH)     weekRef   = r.value.weekH + 'h ref';
       if (r.value.fetchedAt) fetchedAt = r.value.fetchedAt;
     }
   });
   document.getElementById('week-label').textContent = weekLabel;
+  document.getElementById('week-ref').textContent   = weekRef;
   document.getElementById('stale-note').textContent = 'atualizado ' + fetchedAt;
   setLoading(false);
 }
